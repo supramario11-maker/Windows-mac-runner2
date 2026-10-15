@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Cross-Platform Execution Hub</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/core/rfb.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">◆</span><div><strong>EXECUTION HUB</strong><small>REMOTE WORKSPACE CONTROL</small></div></div>
+    <div class="top-actions"><span id="api-indicator" class="pill unknown">API: checking</span><button id="refresh-btn" class="button secondary">Refresh status</button></div>
+  </header>
+  <main class="shell">
+    <section class="hero">
+      <div><p class="eyebrow">CONTROL PLANE / OVERVIEW</p><h1>Your environments.<br><span>One control room.</span></h1>
+      <p class="muted">Connect to authorized desktops and stage application packages from one browser dashboard.</p></div>
+      <div class="hero-badge"><span class="pulse"></span><div><b id="overall-state">Checking systems</b><small>Live health snapshot</small></div></div>
+    </section>
+
+    <section class="status-grid" aria-label="Environment status">
+      <article class="status-card"><div class="card-top"><span class="os-icon linux">L</span><span id="linux-state" class="state">Checking</span></div><h2>Linux / Wine</h2><p>Isolated Linux desktop and Windows compatibility runtime.</p><div class="card-foot"><span>VNC desktop</span><button data-os="linux" class="button small connect-btn">Open desktop</button></div></article>
+      <article class="status-card"><div class="card-top"><span class="os-icon windows">W</span><span id="windows-state" class="state">Checking</span></div><h2>Windows host</h2><p>Optional native Windows endpoint via a separately secured gateway.</p><div class="card-foot"><span>RDP gateway</span><button data-os="windows" class="button small connect-btn">Connect</button></div></article>
+      <article class="status-card"><div class="card-top"><span class="os-icon mac">M</span><span id="mac-state" class="state">Checking</span></div><h2>macOS host</h2><p>Authorized SSH endpoint for compatible simulator workflows.</p><div class="card-foot"><span>SSH / simulator</span><button data-os="mac" class="button small connect-btn">View status</button></div></article>
+    </section>
+
+    <section class="workspace panel">
+      <div class="section-heading"><div><p class="eyebrow">REMOTE DISPLAY</p><h2>Workspace viewer</h2></div><div class="viewer-controls"><label for="viewer-os">Environment</label><select id="viewer-os"><option value="linux">Linux / Wine</option><option value="windows">Windows gateway</option><option value="mac">macOS gateway</option></select><button id="disconnect-btn" class="button secondary small">Disconnect</button></div></div>
+      <div id="viewer" class="viewer"><div class="viewer-empty"><div class="screen-glyph">▣</div><h3>Workspace is not connected</h3><p>Choose Linux / Wine and click “Open desktop”. The browser will connect to the API's configured noVNC WebSocket endpoint.</p><button id="viewer-connect" class="button">Connect to Linux desktop</button></div></div>
+      <div class="viewer-footer"><span id="viewer-state">Not connected</span><span>Use only systems you own or are authorized to access.</span></div>
+    </section>
+
+    <section class="lower-grid">
+      <article class="panel upload-panel"><div class="section-heading"><div><p class="eyebrow">PACKAGE STAGING</p><h2>Upload an application</h2></div><span class="pill">EXE / IPA</span></div>
+        <p class="muted">Files are staged for an explicit action. Uploading does not automatically execute or install them.</p>
+        <form id="upload-form"><label class="dropzone" for="package-file"><span class="upload-icon">↑</span><b id="file-label">Choose an .exe or .ipa package</b><small>Maximum size is enforced by the API</small><input id="package-file" type="file" accept=".exe,.ipa" required></label>
+          <label class="field-label" for="target-os">Target environment</label><select id="target-os"><option value="linux-wine">Linux / Wine (EXE)</option><option value="mac-simulator">macOS Simulator (compatible IPA)</option></select>
+          <button class="button full" type="submit">Upload and stage package</button></form><pre id="upload-result" class="result" aria-live="polite">No package staged.</pre>
+      </article>
+      <article class="panel activity-panel"><div class="section-heading"><div><p class="eyebrow">SYSTEM ACTIVITY</p><h2>Control-plane log</h2></div><button id="clear-log" class="button secondary small">Clear</button></div><div id="activity-log" class="log" aria-live="polite"><p><time>READY</time> Dashboard initialized.</p></div></article>
+    </section>
+    <footer>Execution Hub · Keep API credentials server-side · TLS required outside localhost</footer>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

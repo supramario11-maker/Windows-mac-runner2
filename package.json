@@ -1,0 +1,17 @@
+{
+  "name": "execution-hub-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Authenticated API and package staging gateway for the Cross-Platform Execution Hub",
+  "type": "module",
+  "scripts": { "start": "node server.js", "check": "node --check server.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "multer": "^2.0.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.5.0",
+    "dotenv": "^16.4.7"
+  }
+}
