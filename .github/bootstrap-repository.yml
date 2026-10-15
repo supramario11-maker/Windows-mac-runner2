@@ -1,0 +1,509 @@
+name: Bootstrap Full Repository
+
+on:
+workflow_dispatch:
+push:
+paths:
+- ".github/workflows/bootstrap.yml"
+- "orchestration/**"
+- "backend/**"
+- "frontend/**"
+- "platforms/**"
+- "scripts/**"
+- "config/**"
+
+permissions:
+contents: write
+
+jobs:
+bootstrap:
+if: github.actor != 'github-actions[bot]'
+runs-on: ubuntu-latest
+timeout-minutes: 20
+
+```
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
+    with:
+      token: ${{ secrets.GITHUB_TOKEN }}
+
+  - name: Create every missing starter file
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      create_file() {
+        local path="$1"
+        mkdir -p "$(dirname "$path")"
+
+        if [ ! -e "$path" ]; then
+          echo "Creating: $path"
+          cat > "$path"
+        else
+          echo "Preserving existing file: $path"
+          cat > /dev/null
+        fi
+      }
+
+      # Repository documentation
+      create_file README.md <<'EOF'
+      # Cross-Platform Execution Hub
+
+      A starter web portal for managing platform-specific workloads.
+
+      ## Components
+
+      - backend/: Python API
+      - frontend/: browser interface
+      - orchestration/: Docker configuration
+      - platforms/windows/: Windows executable integration scaffold
+      - platforms/linux/: Linux binary integration scaffold
+      - platforms/ios/: iOS IPA packaging/integration scaffold
+      - config/: application configuration
+      - scripts/: development and validation utilities
+
+      ## Run locally
+
+      Install Docker and Docker Compose, then run:
+
+          docker compose -f orchestration/docker-compose.yml up --build
+
+      Open http://localhost:8000
+
+      ## Limitations
+
+      This is a starter scaffold, not a universal binary executor.
+      Windows executables require a compatible Windows environment or
+      a separately tested compatibility layer. Linux binaries must match
+      the execution environment. IPA installation and execution require
+      compatible Apple signing and device or simulator infrastructure.
+
+      Never execute untrusted binaries on a host or expose an unrestricted
+      execution endpoint to the internet.
+      EOF
+
+      create_file .gitignore <<'EOF'
+      .env
+      .venv/
+      venv/
+      __pycache__/
+      *.py[cod]
+      .pytest_cache/
+      .mypy_cache/
+      .ruff_cache/
+      node_modules/
+      dist/
+      build/
+      *.log
+      *.exe
+      *.ipa
+      *.dll
+      *.so
+      *.dylib
+      .DS_Store
+      EOF
+
+      create_file .dockerignore <<'EOF'
+      .git
+      .github
+      .venv
+      __pycache__
+      *.pyc
+      .env
+      node_modules
+      dist
+      build
+      EOF
+
+      create_file .env.example <<'EOF'
+      APP_NAME=Cross-Platform Execution Hub
+      APP_ENV=development
+      HOST=0.0.0.0
+      PORT=8000
+      EOF
+
+      # Python backend
+      create_file backend/requirements.txt <<'EOF'
+      fastapi>=0.115,<1.0
+      uvicorn[standard]>=0.30,<1.0
+      EOF
+
+      create_file backend/main.py <<'EOF'
+      import os
+      from pathlib import Path
+
+      from fastapi import FastAPI
+      from fastapi.responses import FileResponse
+      from fastapi.staticfiles import StaticFiles
+
+      app = FastAPI(
+          title=os.getenv(
+              "APP_NAME",
+              "Cross-Platform Execution Hub",
+          ),
+          version="0.1.0",
+      )
+
+      FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
+
+      @app.get("/api/health")
+      def health():
+          return {"status": "ok", "service": "execution-hub"}
+
+      @app.get("/api/platforms")
+      def platforms():
+          return {
+              "platforms": [
+                  {
+                      "id": "linux",
+                      "status": "scaffold-only",
+                  },
+                  {
+                      "id": "windows",
+                      "status": "scaffold-only",
+                  },
+                  {
+                      "id": "ios",
+                      "status": "scaffold-only",
+                  },
+              ]
+          }
+
+      @app.get("/")
+      def index():
+          return FileResponse(FRONTEND / "index.html")
+
+      app.mount(
+          "/static",
+          StaticFiles(directory=FRONTEND),
+          name="static",
+      )
+      EOF
+
+      create_file backend/Dockerfile <<'EOF'
+      FROM python:3.12-slim
+
+      ENV PYTHONDONTWRITEBYTECODE=1 \
+          PYTHONUNBUFFERED=1
+
+      WORKDIR /app
+
+      COPY backend/requirements.txt /app/requirements.txt
+
+      RUN pip install --no-cache-dir -r requirements.txt
+
+      COPY backend/ /app/backend/
+      COPY frontend/ /app/frontend/
+
+      EXPOSE 8000
+
+      CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+      EOF
+
+      create_file backend/__init__.py <<'EOF'
+      """Backend application package."""
+      EOF
+
+      # Web interface
+      create_file frontend/index.html <<'EOF'
+      <!doctype html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Execution Hub</title>
+        <link rel="stylesheet" href="/static/style.css">
+      </head>
+      <body>
+        <main class="container">
+          <h1>Execution Hub</h1>
+          <p class="subtitle">
+            Cross-platform workload management starter
+          </p>
+
+          <section class="panel">
+            <h2>Backend status</h2>
+            <p id="health">Checking service...</p>
+            <button id="refresh">Refresh status</button>
+          </section>
+
+          <section class="panel">
+            <h2>Platform integrations</h2>
+            <div id="platforms">Loading integrations...</div>
+          </section>
+
+          <p class="notice">
+            Platform entries are scaffolds, not executable sandboxes.
+          </p>
+        </main>
+        <script src="/static/app.js"></script>
+      </body>
+      </html>
+      EOF
+
+      create_file frontend/style.css <<'EOF'
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #10131b;
+        color: #edf1ff;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+      }
+
+      .container {
+        max-width: 850px;
+        margin: 50px auto;
+      }
+
+      .subtitle, .notice {
+        color: #aab5d0;
+      }
+
+      .panel {
+        margin: 20px 0;
+        padding: 22px;
+        border: 1px solid #343d55;
+        border-radius: 14px;
+        background: #1a2030;
+      }
+
+      button {
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 8px;
+        background: #7595ff;
+        color: #10131b;
+        cursor: pointer;
+      }
+
+      .platform {
+        padding: 12px 0;
+        border-bottom: 1px solid #343d55;
+      }
+      EOF
+
+      create_file frontend/app.js <<'EOF'
+      async function refreshStatus() {
+        const health = document.querySelector("#health");
+        const platforms = document.querySelector("#platforms");
+
+        try {
+          const response = await fetch("/api/health");
+          if (!response.ok) throw new Error("Health check failed");
+
+          const data = await response.json();
+          health.textContent = `Service status: ${data.status}`;
+
+          const result = await fetch("/api/platforms");
+          if (!result.ok) throw new Error("Platform request failed");
+
+          const payload = await result.json();
+          platforms.replaceChildren();
+
+          for (const platform of payload.platforms) {
+            const item = document.createElement("div");
+            item.className = "platform";
+            item.textContent =
+              `${platform.id}: ${platform.status}`;
+            platforms.appendChild(item);
+          }
+        } catch (error) {
+          health.textContent = "Backend unavailable";
+          platforms.textContent = "Could not load integrations.";
+          console.error(error);
+        }
+      }
+
+      document.querySelector("#refresh").addEventListener(
+        "click",
+        refreshStatus
+      );
+
+      refreshStatus();
+      EOF
+
+      # Platform-specific scaffolds
+      create_file platforms/linux/README.md <<'EOF'
+      # Linux integration
+
+      Implement execution through isolated, short-lived containers.
+      Validate binary format, architecture, resource limits and permissions.
+      Do not mount the Docker socket into untrusted workloads.
+      EOF
+
+      create_file platforms/windows/README.md <<'EOF'
+      # Windows integration
+
+      Windows .exe execution requires a compatible Windows worker or a
+      separately evaluated compatibility layer. The Ubuntu CI runner does
+      not provide a native Windows execution environment.
+      EOF
+
+      create_file platforms/ios/README.md <<'EOF'
+      # iOS integration
+
+      IPA files are Apple application packages, not Linux executables.
+      Deployment requires appropriate signing and compatible Apple
+      hardware or simulator infrastructure. Do not attempt to bypass
+      signing or device security controls.
+      EOF
+
+      # Configuration
+      create_file config/app.json <<'EOF'
+      {
+        "name": "Cross-Platform Execution Hub",
+        "version": "0.1.0",
+        "enabled_platforms": [
+          "linux",
+          "windows",
+          "ios"
+        ],
+        "execution_enabled_by_default": false
+      }
+      EOF
+
+      # Orchestration
+      create_file orchestration/Dockerfile <<'EOF'
+      FROM python:3.12-slim
+
+      ENV PYTHONDONTWRITEBYTECODE=1 \
+          PYTHONUNBUFFERED=1
+
+      WORKDIR /app
+
+      COPY backend/requirements.txt /app/requirements.txt
+      RUN pip install --no-cache-dir -r requirements.txt
+
+      COPY backend/ /app/backend/
+      COPY frontend/ /app/frontend/
+
+      EXPOSE 8000
+
+      CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+      EOF
+
+      create_file orchestration/docker-compose.yml <<'EOF'
+      services:
+        web:
+          build:
+            context: ..
+            dockerfile: orchestration/Dockerfile
+          ports:
+            - "127.0.0.1:8000:8000"
+          restart: unless-stopped
+          init: true
+          security_opt:
+            - no-new-privileges:true
+      EOF
+
+      create_file orchestration/supervisord.conf <<'EOF'
+      [supervisord]
+      nodaemon=true
+      logfile=/dev/null
+      pidfile=/tmp/supervisord.pid
+      EOF
+
+      # Utility scripts
+      create_file scripts/validate.sh <<'EOF'
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      docker compose \
+        -f orchestration/docker-compose.yml config --quiet
+
+      python -m compileall -q backend
+
+      echo "Repository validation passed."
+      EOF
+
+      create_file scripts/bootstrap-info.sh <<'EOF'
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      echo "Repository files:"
+      find . \
+        -path './.git' -prune -o \
+        -type f -print | sort
+      EOF
+
+      chmod +x scripts/*.sh
+
+      echo "Repository bootstrap complete."
+
+  - name: Commit and push generated files
+    shell: bash
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    run: |
+      set -euo pipefail
+
+      git config user.name "github-actions[bot]"
+      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      git add -A
+
+      if git diff --cached --quiet; then
+        echo "No new files to commit."
+      else
+        git commit -m "chore: bootstrap missing project files"
+        git push origin "HEAD:${GITHUB_REF_NAME}"
+        echo "Generated files committed and pushed."
+      fi
+
+  - name: Validate repository
+    run: bash scripts/validate.sh
+
+  - name: Build Docker application
+    run: docker compose -f orchestration/docker-compose.yml build
+
+  - name: Start application
+    run: docker compose -f orchestration/docker-compose.yml up -d
+
+  - name: Test application API and frontend
+    shell: bash
+    run: |
+      set -euo pipefail
+
+      for attempt in $(seq 1 30); do
+        if curl --fail --silent \
+          http://127.0.0.1:8000/api/health \
+          > /tmp/health.json; then
+          break
+        fi
+
+        if [ "$attempt" -eq 30 ]; then
+          echo "::error::Application did not start."
+          exit 1
+        fi
+
+        sleep 2
+      done
+
+      cat /tmp/health.json
+
+      curl --fail --silent \
+        http://127.0.0.1:8000/ > /dev/null
+
+      curl --fail --silent \
+        http://127.0.0.1:8000/api/platforms
+
+      echo
+      echo "API and frontend checks passed."
+
+  - name: Print diagnostic logs
+    if: always()
+    run: |
+      docker compose \
+        -f orchestration/docker-compose.yml logs --no-color || true
+
+  - name: Shut down test containers
+    if: always()
+    run: |
+      docker compose \
+        -f orchestration/docker-compose.yml down --remove-orphans || true
+```
